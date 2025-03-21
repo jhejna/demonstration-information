@@ -58,7 +58,8 @@ def main(_):
     tf.config.set_visible_devices([], "GPU")
 
     ds, pred_fn, dataset_ids = quality_estimators.get_dataset_and_score_fn(
-        FLAGS.estimator, FLAGS.batch_size, FLAGS.obs_ckpt, FLAGS.action_ckpt, FLAGS.obs_action_ckpt
+        FLAGS.estimator, FLAGS.batch_size, FLAGS.obs_ckpt, FLAGS.action_ckpt, FLAGS.obs_action_ckpt,
+        sharding=rep_sharding
     )
     ds = map(shard, ds)  # Apply sharding to the batches
     jitted_pred_fn = jax.jit(pred_fn, in_shardings=(dp_sharding, None), out_shardings=(rep_sharding, rep_sharding))

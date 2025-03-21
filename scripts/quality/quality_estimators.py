@@ -151,6 +151,7 @@ def get_dataset_and_score_fn(
     action_ckpt: str | None = None,
     obs_action_ckpt: str | None = None,
     datasets: List[str] | None = None,
+    sharding: jax.sharding.Sharding | None = None,
 ):
     # First get the prediction function, and set the correct dataset parameters for it.
     if estimator == "random":
@@ -158,8 +159,8 @@ def get_dataset_and_score_fn(
         repeat, discard_fraction = 1, 0.99  # Remove almost all the data, don't repeat
     elif estimator == "ksg":
         assert obs_ckpt is not None and action_ckpt is not None
-        obs_alg, obs_state, _, _ = load_checkpoint(obs_ckpt)
-        action_alg, action_state, _, _ = load_checkpoint(action_ckpt)
+        obs_alg, obs_state, _, _ = load_checkpoint(obs_ckpt, sharding=sharding)
+        action_alg, action_state, _, _ = load_checkpoint(action_ckpt, sharding=sharding)
         pred_fn = functools.partial(
             ksg_estimator,
             ks=np.arange(5, 8),
@@ -171,8 +172,8 @@ def get_dataset_and_score_fn(
         repeat, discard_fraction = 4, 0.5
     elif estimator == "biksg":
         assert obs_ckpt is not None and action_ckpt is not None
-        obs_alg, obs_state, _, _ = load_checkpoint(obs_ckpt)
-        action_alg, action_state, _, _ = load_checkpoint(action_ckpt)
+        obs_alg, obs_state, _, _ = load_checkpoint(obs_ckpt, sharding=sharding)
+        action_alg, action_state, _, _ = load_checkpoint(action_ckpt, sharding=sharding)
         pred_fn = functools.partial(
             biksg_estimator,
             ks=np.arange(2, 5),
@@ -184,10 +185,10 @@ def get_dataset_and_score_fn(
         repeat, discard_fraction = 4, 0.5
     elif estimator == "kl":
         assert obs_ckpt is not None and action_ckpt is not None
-        obs_alg, obs_state, _, _ = load_checkpoint(obs_ckpt)
-        action_alg, action_state, _, _ = load_checkpoint(action_ckpt)
+        obs_alg, obs_state, _, _ = load_checkpoint(obs_ckpt, sharding=sharding)
+        action_alg, action_state, _, _ = load_checkpoint(action_ckpt, sharding=sharding)
         if obs_action_ckpt is not None:
-            obs_action_alg, obs_action_state, _, _ = load_checkpoint(obs_action_ckpt)
+            obs_action_alg, obs_action_state, _, _ = load_checkpoint(obs_action_ckpt, sharding=sharding)
         else:
             obs_action_alg, obs_action_state = None, None
         pred_fn = functools.partial(
@@ -204,37 +205,37 @@ def get_dataset_and_score_fn(
         repeat, discard_fraction = 4, 0.5
     elif estimator == "nce":
         assert obs_action_ckpt is not None
-        obs_action_alg, obs_action_state, _, _ = load_checkpoint(obs_action_ckpt)
+        obs_action_alg, obs_action_state, _, _ = load_checkpoint(obs_action_ckpt, sharding=sharding)
         pred_fn = functools.partial(nce_estimator, obs_action_alg=obs_action_alg, obs_action_state=obs_action_state)
         repeat, discard_fraction = 1, 0.0
     elif estimator == "vip":
         assert obs_ckpt is not None
-        obs_alg, obs_state, _, _ = load_checkpoint(obs_ckpt)
+        obs_alg, obs_state, _, _ = load_checkpoint(obs_ckpt, sharding=sharding)
         pred_fn = functools.partial(vip_estimator, obs_alg=obs_alg, obs_state=obs_state)
         repeat, discard_fraction = 1, 0.0
     elif estimator == "l2":
         assert obs_ckpt is not None
-        obs_alg, obs_state, _, _ = load_checkpoint(obs_ckpt)
+        obs_alg, obs_state, _, _ = load_checkpoint(obs_ckpt, sharding=sharding)
         pred_fn = functools.partial(l2_loss_estimator, alg=obs_alg, state=obs_state)
         repeat, discard_fraction = 1, 0.0
     elif estimator == "stddev":
         assert obs_ckpt is not None
-        obs_alg, obs_state, _, _ = load_checkpoint(obs_ckpt)
+        obs_alg, obs_state, _, _ = load_checkpoint(obs_ckpt, sharding=sharding)
         pred_fn = functools.partial(stddev_estimator, alg=obs_alg, state=obs_state)
         repeat, discard_fraction = 1, 0.0
     elif estimator == "inv_stddev":
         assert obs_ckpt is not None
-        obs_alg, obs_state, _, _ = load_checkpoint(obs_ckpt)
+        obs_alg, obs_state, _, _ = load_checkpoint(obs_ckpt, sharding=sharding)
         pred_fn = functools.partial(inverse_stddev_estimator, alg=obs_alg, state=obs_state)
         repeat, discard_fraction = 1, 0.0
     elif estimator == "compatibility":
         assert obs_ckpt is not None
-        obs_alg, obs_state, _, _ = load_checkpoint(obs_ckpt)
+        obs_alg, obs_state, _, _ = load_checkpoint(obs_ckpt, sharding=sharding)
         pred_fn = functools.partial(compatibility_estimator, alg=obs_alg, state=obs_state)
         repeat, discard_fraction = 1, 0.0
     elif estimator == "mine":
         assert obs_action_ckpt is not None
-        obs_action_alg, obs_action_state, _, _ = load_checkpoint(obs_action_ckpt)
+        obs_action_alg, obs_action_state, _, _ = load_checkpoint(obs_action_ckpt, sharding=sharding)
         pred_fn = functools.partial(mine_estimator, alg=obs_action_alg, state=obs_action_state)
         repeat, discard_fraction = 1, 0.0
     else:
