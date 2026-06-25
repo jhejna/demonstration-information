@@ -38,6 +38,7 @@ flags.DEFINE_enum(
 flags.DEFINE_integer(
     "batch_size", 1024, "The batch size for the dataset, by default override the config.", required=False
 )
+flags.DEFINE_string("split", None, "Override dataset split (e.g. 'test'). Defaults to whatever is in the checkpoint config.", required=False)
 
 
 def main(_):
@@ -58,7 +59,8 @@ def main(_):
     tf.config.set_visible_devices([], "GPU")
 
     ds, pred_fn, dataset_ids = quality_estimators.get_dataset_and_score_fn(
-        FLAGS.estimator, FLAGS.batch_size, FLAGS.obs_ckpt, FLAGS.action_ckpt, FLAGS.obs_action_ckpt
+        FLAGS.estimator, FLAGS.batch_size, FLAGS.obs_ckpt, FLAGS.action_ckpt, FLAGS.obs_action_ckpt,
+        split=FLAGS.split,
     )
     ds = map(shard, ds)  # Apply sharding to the batches
     jitted_pred_fn = jax.jit(pred_fn, in_shardings=(dp_sharding, None), out_shardings=(rep_sharding, rep_sharding))

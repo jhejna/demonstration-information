@@ -9,6 +9,7 @@ import tensorflow_datasets as tfds
 
 from .transforms import normalize
 from .utils import DataType, NormalizationType, StateEncoding
+from .lerobot import is_lerobot_dataset, is_mcap_dataset, load_lerobot_dataset, load_mcap_dataset
 
 """
 All Datasets are expected to follow the TFDS Format.
@@ -96,7 +97,48 @@ def load_dataset(
     This function loads a dataset from a path and standardizes it.
 
     If you pass in a structure, it garuntees that the resulting dataset will follow that exact structure.
+
+    Supports three on-disk formats, detected automatically from *path*:
+      - LeRobot  (parquet + mp4)  -- path has meta/info.json
+      - MCAP     (ROS 2 bags)     -- path contains *.mcap files
+      - RLDS/TFDS (default)       -- everything else
     """
+    # ------------------------------------------------------------------
+    # LeRobot format  (parquet + mp4)
+    # ------------------------------------------------------------------
+    if isinstance(path, str) and is_lerobot_dataset(path):
+        return load_lerobot_dataset(
+            path=path,
+            split=split,
+            standardization_transform=standardization_transform,
+            structure=structure,
+            dataset_statistics=dataset_statistics,
+            recompute_statistics=recompute_statistics,
+            num_parallel_calls=num_parallel_calls,
+            shuffle=shuffle,
+            filter_fn=filter_fn,
+            minimum_length=minimum_length,
+        )
+
+    # ------------------------------------------------------------------
+    # MCAP format  (ROS 2 bag files)
+    # ------------------------------------------------------------------
+    if isinstance(path, str) and is_mcap_dataset(path):
+        return load_mcap_dataset(
+            path=path,
+            split=split,
+            standardization_transform=standardization_transform,
+            structure=structure,
+            dataset_statistics=dataset_statistics,
+            num_parallel_calls=num_parallel_calls,
+            shuffle=shuffle,
+            filter_fn=filter_fn,
+            minimum_length=minimum_length,
+        )
+
+    # ------------------------------------------------------------------
+    # RLDS / TFDS format  (default)
+    # ------------------------------------------------------------------
     if isinstance(path, list):
         builder = tfds.builder_from_directories(builder_dir=path)
     else:

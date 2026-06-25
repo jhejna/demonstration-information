@@ -1,6 +1,7 @@
 import functools
 from typing import Dict, Optional
 
+import jax
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
@@ -8,6 +9,20 @@ from openx.utils.spec import ModuleSpec
 
 from . import transforms
 from .core import STANDARD_STRUCTURE, load_dataset
+from .lerobot import is_lerobot_dataset, is_mcap_dataset
+
+
+def _split_for_jax_process(split: str) -> str:
+    """Shard a split string across JAX processes without relying on tfds."""
+    n = jax.process_count()
+    i = jax.process_index()
+    if n == 1:
+        return split
+    # Append a percent-slice that _parse_split in lerobot.py understands,
+    # and that tfds also accepts for RLDS datasets.
+    lo = i * 100 // n
+    hi = (i + 1) * 100 // n
+    return f"{split}[{lo}%:{hi}%]"
 
 VAL_PARALLEL_CALLS = 1
 
@@ -61,7 +76,10 @@ def make_dataloader(
         if ds_config.get("train_split"):
             split = ds_config["train_split"]
             if split_for_jax:
-                split = tfds.split_for_jax_process(split)
+                if is_lerobot_dataset(path) or is_mcap_dataset(path):
+                    split = _split_for_jax_process(split)
+                else:
+                    split = tfds.split_for_jax_process(split)
             ds, ds_stats = load_dataset(
                 path,
                 split,

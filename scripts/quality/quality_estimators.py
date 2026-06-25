@@ -151,6 +151,7 @@ def get_dataset_and_score_fn(
     action_ckpt: str | None = None,
     obs_action_ckpt: str | None = None,
     datasets: List[str] | None = None,
+    split: str | None = None,
 ):
     # First get the prediction function, and set the correct dataset parameters for it.
     if estimator == "random":
@@ -265,6 +266,8 @@ def get_dataset_and_score_fn(
     for ds in dataloader_config["datasets"]:
         if "val_split" in dataloader_config["datasets"][ds]:
             del dataloader_config["datasets"][ds]["val_split"]
+        if split is not None:
+            dataloader_config["datasets"][ds]["train_split"] = split
 
     if dataloader_config.get("goal_conditioning", None) is not None:
         dataloader_config["goal_conditioning"] = "last"  # Always set to last frame for preds.

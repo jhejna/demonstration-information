@@ -198,6 +198,7 @@ def main(_):
         jitted_predict = jax.jit(alg.predict)
 
     ### Init Checkpointing ###
+    start_step = 0
     if not FLAGS.debug:
         state_checkpointer = orbax.checkpoint.CheckpointManager(
             tf.io.gfile.join(save_path, "state"),
@@ -205,6 +206,11 @@ def main(_):
             options=orbax.checkpoint.CheckpointManagerOptions(max_to_keep=1, create=True),
         )
         weights_checkpointer = orbax.checkpoint.CheckpointManager(save_path, orbax.checkpoint.PyTreeCheckpointer())
+        latest = state_checkpointer.latest_step()
+        if latest is not None:
+            state = state_checkpointer.restore(latest, items=state)
+            start_step = latest
+            print(f"Resumed from checkpoint at step {start_step}")
 
     ### Worker Saves Statistics, Configs, ExBatch ###
     if jax.process_index() == 0 and not FLAGS.debug:
@@ -226,16 +232,13 @@ def main(_):
             json.dump(FLAGS.config.to_dict(), f, indent=4)
 
         # Setup logging
-        if os.environ.get("WANDB_API_KEY") is not None:
-            wandb.init(
-                config=FLAGS.config.to_dict(),
-                project=FLAGS.project,
-                name=name,
-                mode="online",
-            )
-            writers = ("csv",)
-        else:
-            writers = ("csv", "tb")
+        wandb.init(
+            config=FLAGS.config.to_dict(),
+            project=FLAGS.project,
+            name=name,
+            mode="online",
+        )
+        writers = ("csv",)
         if "eval_freq" in FLAGS.config:
             writers = (*writers, "eval")
     else:
@@ -247,7 +250,7 @@ def main(_):
 
     # Training constants
     train_metrics = defaultdict(list)
-    for i in tqdm.tqdm(range(FLAGS.config.steps), total=FLAGS.config.steps, dynamic_ncols=True):
+    for i in tqdm.tqdm(range(start_step, FLAGS.config.steps), total=FLAGS.config.steps, initial=start_step, dynamic_ncols=True):
         rng = jax.random.fold_in(rng, i)
 
         with timer("dataset"):
