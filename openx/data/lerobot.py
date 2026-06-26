@@ -568,7 +568,7 @@ def _read_mcap_episode(ep_dir: str, video_cameras: List[str]) -> dict:
         actions.append(action_buf[fi]["data"])
         timestamps.append(state_buf[fi]["timestamp"])
         frame_indices.append(fi)
-        dones.append(meta_buf[fi]["next_done"])
+        dones.append(meta_buf.get(fi, {}).get("next_done", False))
 
     # Subsample 30 fps → 5 fps
     idx = list(range(0, len(states), SUBSAMPLE_FACTOR))
@@ -595,6 +595,8 @@ def _read_mcap_episode(ep_dir: str, video_cameras: List[str]) -> dict:
 
     for cam in video_cameras:
         mp4_path = os.path.join(ep_dir, f"{ep_name}_{cam}.mp4")
+        if not os.path.exists(mp4_path):
+            mp4_path = os.path.join(ep_dir, f"{cam}.mp4")  # fallback: bare cam name
         if not os.path.exists(mp4_path):
             raise FileNotFoundError(f"Missing video: {mp4_path}")
         frames = iio.imread(mp4_path, plugin="pyav")  # (T, H, W, 3)
